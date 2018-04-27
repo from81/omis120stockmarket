@@ -1,0 +1,21 @@
+{% extends "layout.html" %} {% block title %} Leaderboard {% endblock %} {% block main %}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Rank</th>
+            <th>Name</th>
+            <th>$$$</th>
+            <!-- add % change -->
+        </tr>
+    </thead>
+    <tbody>
+        {% for player in leaders %}
+        <tr>
+            <td>{{ player.rank }}</td>
+            <td>{{ player.name }}</td>
+            <td>{{ player.balance }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
