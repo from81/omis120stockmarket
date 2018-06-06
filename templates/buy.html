@@ -1,28 +1,28 @@
 <!DOCTYPE html>
 <html>
-<head>
-	<title></title>
-</head>
-<body>
 
+	<head>
+		<title></title>
+	</head>
 
+	<body>
+		{% extends "layout.html" %} {% block title %} Buy {% endblock %} {% block main %}
+		<form action="/buy" method="post">
+			<div>
+				<input autofocus class="form-control" name="symbol" placeholder="Symbol" type="text" />
+			</div>
+			<div>
+				<input class="form-control" name="shares" placeholder="Shares" type="text" />
+			</div>
+			<button onclick="alpha()" type="submit">Buy</button>
+		</form>
+		{% endblock %}
+		<script>
+			function alpha() {
+				alert("Congratulations on your purchase! 💸💸💸");
+			}
+		</script>
 
-{% extends "layout.html" %} {% block title %} Buy {% endblock %} {% block main %}
-<form action="/buy" method="post">
-    <div>
-        <input autofocus class="form-control" name="symbol" placeholder="Symbol" type="text" />
-    </div>
-    <div>
-        <input class="form-control" name="shares" placeholder="Shares" type="text" />
-    </div>
-    <button onclick="alpha()" type="submit">Buy</button>
-</form>
-{% endblock %}
-<script>
-function alpha(){
-	alert("Congratulations on your purchase! 💸💸💸");
-}	
-</script>
+	</body>
 
-</body>
 </html>
