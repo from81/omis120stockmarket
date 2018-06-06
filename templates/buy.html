@@ -1,11 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+</head>
+<body>
+
+
+
 {% extends "layout.html" %} {% block title %} Buy {% endblock %} {% block main %}
 <form action="/buy" method="post">
     <div>
-        <input class="form-control" name="symbol" placeholder="Symbol" type="text" />
+        <input autofocus class="form-control" name="symbol" placeholder="Symbol" type="text" />
     </div>
     <div>
         <input class="form-control" name="shares" placeholder="Shares" type="text" />
     </div>
-    <button type="submit">Buy</button>
+    <button onclick="alpha()" type="submit">Buy</button>
 </form>
 {% endblock %}
+<script>
+function alpha(){
+	alert("Congratulations on your purchase! 💸💸💸");
+}	
+</script>
+
+</body>
+</html>
