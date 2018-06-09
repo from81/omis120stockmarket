@@ -1,37 +1,26 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title></title>
-</head>
-<body>
-
-
-{% extends "layout.html" %}
-
-{% block title %}
-    Sell
+{% extends "layout.html" %} {% block title %} Sell {% endblock %} {% block main %}
+<form action="/sell" method="post">
+    <div class="form-group">
+        <select class="form-control" name="symbol">
+            <option disabled selected value="">Symbol</option>
+            {% for stock in stocks %}
+            <option value="{{ stock.symbol }}">{{ stock.symbol }}</option>
+            {% endfor %}
+        </select><br>
+        <select class="form-control" name="queryType">
+            <option disabled selected value="">Type</option>
+            <option value="stock">Stock</option>
+            <option value="crypto">Crypto</option>
+        </select><br>
+        <input class="form-control" name="shares" placeholder="Shares" type="text" />
+    </div>
+    <button class="btn btn-primary" type="submit">Sell</button>
+</form>
 {% endblock %}
-
-{% block main %}
-    <form action="/sell" method="post">
-        <div class="form-group">
-            <select class="form-control" name="symbol">
-                <option disabled selected value="">Symbol</option>
-                {% for stock in stocks %}
-                    <option value="{{ stock.symbol }}">{{ stock.symbol }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="form-group">
-            <input class="form-control" name="shares" placeholder="Shares" type="text"/>
-        </div>
-        <button onclick="beta()" class="btn btn-primary" type="submit">Sell</button>
-    </form>
-{% endblock %}
-<script>
+<!-- <script>
 function beta(){
     alert("Congratulations on your sale! ✨💰✨💰");
-}   
+}
 </script>
 </body>
-</html>
+</html> -->

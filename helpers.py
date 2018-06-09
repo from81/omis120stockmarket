@@ -20,11 +20,7 @@ def apology(message, code=400):
 
 
 def login_required(f):
-    """
-    Decorate routes to require login.
-
-    http://flask.pocoo.org/docs/0.12/patterns/viewdecorators/
-    """
+    """Require log in"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if session.get("user_id") is None:
@@ -33,8 +29,9 @@ def login_required(f):
     return decorated_function
 
 
-def lookup(symbol):
+def lookup(symbol, queryType):
     """Look up quote for symbol."""
+    apikey = "TN3OWU38ZSMDF9WH"
 
     # reject symbol if it starts with caret
     if symbol.startswith("^"):
@@ -44,67 +41,84 @@ def lookup(symbol):
     if "," in symbol:
         return None
 
-    # Query Yahoo for quote
-    # http://stackoverflow.com/a/21351911
-    try:
-
-        # GET CSV
-        url = f"http://download.finance.yahoo.com/d/quotes.csv?f=snl1&s={symbol}"
-        webpage = urllib.request.urlopen(url)
-
-        # Read CSV
-        datareader = csv.reader(webpage.read().decode("utf-8").splitlines())
-
-        # Parse first row
-        row = next(datareader)
-
-        # Ensure stock exists
+    if queryType == "stock":
+        # Query Alpha Vantage for quote instead
+        # https://www.alphavantage.co/documentation/
         try:
-            price = float(row[2])
+
+            # GET CSV
+            url = f"https://www.alphavantage.co/query?apikey={apikey}&datatype=csv&function=TIME_SERIES_INTRADAY&interval=1min&symbol={symbol}"
+            webpage = urllib.request.urlopen(url)
+
+            # Parse CSV
+            datareader = csv.reader(
+                webpage.read().decode("utf-8").splitlines())
+
+            # Ignore first row
+            next(datareader)
+
+            # Parse second row
+            row = next(datareader)
+
+            # Ensure stock exists
+            try:
+                price = float(row[4])
+            except:
+                return None
+
+            symbolU = symbol.upper()
+
+            # Return stock's name (as a str), price (as a float), and (uppercased) symbol (as a str)
+            return {
+                "name": symbolU,  # for backward compatibility with Yahoo
+                "price": price,
+                "symbol": symbolU,
+                "type": queryType
+            }
+
         except:
             return None
 
-        # Return stock's name (as a str), price (as a float), and (uppercased) symbol (as a str)
-        return {
-            "name": row[1],
-            "price": price,
-            "symbol": row[0].upper()
-        }
-
-    except:
-        pass
-
-    # Query Alpha Vantage for quote instead
-    # https://www.alphavantage.co/documentation/
-    try:
-
-        # GET CSV
-        url = f"https://www.alphavantage.co/query?apikey=TN3OWU38ZSMDF9WH&datatype=csv&function=TIME_SERIES_INTRADAY&interval=1min&symbol={symbol}"
-        webpage = urllib.request.urlopen(url)
-
-        # Parse CSV
-        datareader = csv.reader(webpage.read().decode("utf-8").splitlines())
-
-        # Ignore first row
-        next(datareader)
-
-        # Parse second row
-        row = next(datareader)
-
-        # Ensure stock exists
+    elif queryType == "crypto":
+        # Query Alpha Vantage for quote instead
+        # https://www.alphavantage.co/documentation/
         try:
-            price = float(row[4])
+
+            # GET CSV
+            url = f"https://www.alphavantage.co/query?apikey={apikey}&datatype=csv&function=DIGITAL_CURRENCY_INTRADAY&market=USD&symbol={symbol}"
+
+            webpage = urllib.request.urlopen(url)
+
+            # Parse CSV
+            datareader = csv.reader(
+                webpage.read().decode("utf-8").splitlines())
+
+            # Ignore first row
+            next(datareader)
+
+            # Parse second row
+            row = next(datareader)
+
+            # for backward compatibility with Yahoo
+            symbolU = symbol.upper()
+
+            # Ensure stock exists
+            try:
+                price = round(float(row[1]), 2)
+            except:
+                return None
+
+            # Return stock's name (as a str), price (as a float), and (uppercased) symbol (as a str)
+            return {
+                "name": symbolU,
+                "price": price,
+                "symbol": symbolU,
+                "type": queryType
+            }
+
         except:
             return None
-
-        # Return stock's name (as a str), price (as a float), and (uppercased) symbol (as a str)
-        return {
-            "name": symbol.upper(),  # for backward compatibility with Yahoo
-            "price": price,
-            "symbol": symbol.upper()
-        }
-
-    except:
+    else:
         return None
 
 

@@ -11,7 +11,7 @@ from helpers import apology, login_required, lookup, usd
 # Configure application
 app = Flask(__name__)
 
-# Ensure responses aren't cached
+# Check that responses aren't cached
 
 
 @app.after_request
@@ -78,19 +78,20 @@ def index():
     gtotal = cash
 
     # Query for portfolio
-    stocks = db.execute("""SELECT symbol, shares FROM
-        (SELECT symbol, sum(shares) AS \"shares\" FROM transactions WHERE id = :userid GROUP BY symbol)
+    stocks = db.execute("""SELECT symbol, shares, type FROM
+        (SELECT symbol, sum(shares) AS \"shares\", type FROM transactions WHERE id = :userid GROUP BY symbol)
         WHERE shares > 0""", userid=userid)
 
     # Reorganize stocks and append to list as a dict obj
     portfolio = []
     for i in stocks:
-        stock = lookup(i["symbol"])
+        stock = lookup(i["symbol"], i["type"])
         price = usd(stock["price"])
         total = usd(stock["price"] * i["shares"])
         temp = {
             "symbol": stock["symbol"],
             "name": stock["name"],
+            "type": stock["type"],
             "shares": i["shares"],
             "price": price,
             "total": total
@@ -119,8 +120,12 @@ def buy():
             "SELECT cash FROM users WHERE id = :userid", userid=userid)
         cash = cash[0]["cash"]
 
+        # Determine type
+        stock = request.form.get("symbol")
+        queryType = request.form.get("queryType")
+
         # Query the stock
-        stock = lookup(request.form.get("symbol"))
+        stock = lookup(stock, queryType)
 
         # Ensure stock symbol is valid
         if not stock:
@@ -152,8 +157,8 @@ def buy():
 
         # Buy
         else:
-            db.execute('INSERT INTO transactions (id, symbol, date, shares, price) VALUES (:userid, :symbol, datetime(), :shares, :price)',
-                       userid=userid, symbol=symbol, shares=shares, price=price)
+            db.execute('INSERT INTO transactions (id, symbol, date, shares, price, type) VALUES (:userid, :symbol, datetime(), :shares, :price, :queryType)',
+                       userid=userid, symbol=symbol, shares=shares, price=price, queryType=queryType)
             db.execute('UPDATE users SET cash = :cash + :total WHERE id = :userid',
                        cash=cash, total=total, userid=userid)
 
@@ -172,9 +177,10 @@ def history():
     # Get user id, query for cash balance and assign to cash
     userid = session["user_id"]
 
+    # note: add type
     # Query for all transactions
     records = db.execute(
-        "SELECT date, symbol, shares, price FROM transactions WHERE id = :userid ORDER BY date DESC", userid=userid)
+        "SELECT date, symbol, type, shares, price FROM transactions WHERE id = :userid ORDER BY date DESC", userid=userid)
 
     # Convert price to USD
     for record in records:
@@ -275,20 +281,21 @@ def pwchange():
 @app.route("/quote", methods=["GET", "POST"])
 @login_required
 def quote():
-    """Get stock quote."""
+    """Get quote."""
     # User reached route via POST (as by submitting a form via POST)
     if request.method == "POST":
 
         stock = request.form.get("symbol")
-        stock = lookup(stock)
+        queryType = request.form.get("queryType")
+        stock = lookup(stock, queryType)
 
         # Ensure stock symbol was entered
         if not request.form.get("symbol"):
             return apology("must enter stock symbol", 400)
 
-        # Ensure stock symbol is valid
-        if stock is None:
-            return apology("must enter a valid stock symbol", 400)
+        # # Ensure stock symbol is valid
+        # if stock is None:
+        #     return apology("must enter a valid stock symbol", 400)
 
         # Parse output from lookup() and return as POST
         name = stock["name"]
@@ -298,6 +305,7 @@ def quote():
 
     # User reached route via GET (as by clicking a link or via redirect)
     else:
+
         return render_template("quote.html")
 
 
@@ -353,8 +361,8 @@ def sell():
     cash = cash[0]["cash"]
 
     # Query for portfolio
-    stocks = db.execute("""SELECT symbol, shares FROM
-        (SELECT symbol, sum(shares) AS \"shares\" FROM transactions WHERE id = :userid GROUP BY symbol)
+    stocks = db.execute("""SELECT symbol, shares, type FROM
+        (SELECT symbol, sum(shares) AS \"shares\", type FROM transactions WHERE id = :userid GROUP BY symbol)
         WHERE shares > 0""", userid=userid)
 
     # Create empty list
@@ -362,10 +370,12 @@ def sell():
 
     # Create dict objects and append to list
     for i in stocks:
-        stock = lookup(i["symbol"])
+        stock = lookup(i["symbol"], i["type"])
+        # note: change to name + type to avoid confusion
         temp = {
             "symbol": stock["symbol"],
             "name": stock["name"],
+            "type": stock["type"],
             "shares": i["shares"],
             "price": stock["price"],
             "total": stock["price"] * i["shares"]}
@@ -377,7 +387,8 @@ def sell():
 
     # Store user input value, call lookup(), and parse output
     stock = request.form.get("symbol")
-    stock = lookup(stock)
+    queryType = request.form.get("queryType")
+    stock = lookup(stock, queryType)
     symbol = stock["symbol"]
     price = stock["price"]
     shares = request.form.get("shares")
@@ -405,19 +416,18 @@ def sell():
         return apology("must enter a valid stock symbol", 400)
 
     # Query for stock to be sold
-    sell = db.execute("""SELECT * FROM (SELECT symbol, sum(shares) AS \"shares\"
-        FROM transactions WHERE id = :userid GROUP BY symbol)
+    sell = db.execute("""SELECT symbol, shares FROM (SELECT symbol, sum(shares) AS \"shares\" FROM transactions WHERE id = :userid GROUP BY symbol)
         WHERE symbol = :symbol""", userid=userid, symbol=symbol)
 
     # Ensure the entered number of shares is valid
-    if sell[0]["shares"] < shares:
+    if shares > sell[0]["shares"]:
         return apology("too many shares", 400)
 
     # Convert shares to negative to enter into database
     shares *= -1
 
-    db.execute('INSERT INTO transactions (id, symbol, date, shares, price) VALUES (:userid, :symbol, datetime(), :shares, :price)',
-               userid=userid, symbol=symbol, shares=shares, price=price)
+    db.execute('INSERT INTO transactions (id, symbol, date, shares, price, type) VALUES (:userid, :symbol, datetime(), :shares, :price, :queryType)',
+               userid=userid, symbol=symbol, shares=shares, price=price, queryType=queryType)
     db.execute('UPDATE users SET cash = :cash + :total WHERE id = :userid',
                cash=cash, total=total, userid=userid)
 
@@ -431,7 +441,7 @@ def leaderboard():
     """Top players"""
     # retrieve top 10 players
     players = db.execute(
-        "SELECT users.username, users.cash FROM users INNER JOIN transactions ON transactions.id = users.id GROUP BY users.username ORDER BY users.cash DESC LIMIT 10;")
+        'SELECT users.username, users.cash FROM users INNER JOIN transactions ON transactions.id = users.id GROUP BY users.username ORDER BY users.cash DESC LIMIT 10;')
 
     # Reorganize stocks and append to list as a dict obj
     leaders = []
